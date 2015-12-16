@@ -1,0 +1,57 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 21
+    buildToolsVersion "23.0.2"
+
+    defaultConfig {
+        applicationId "com.example.hellojni"
+        minSdkVersion 3
+        targetSdkVersion 3
+
+        ndk {
+            moduleName "hello-jni"
+        }
+
+        testApplicationId "com.example.hellojni.tests"
+        testInstrumentationRunner "android.test.InstrumentationTestRunner"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    sourceSets {
+        main {
+            //jniLibs.srcDirs = ['src/main/jniLibs']
+            jni.srcDirs = ['src/main/jni'] //disable automatic ndk-build call
+        }
+    }
+
+    task buildNative(type: Exec, description: 'Compile JNI source windows version NDK') {
+        def ndkDir = android.ndkDirectory
+        commandLine "$ndkDir/ndk-build.cmd",
+                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
+                '-j', Runtime.runtime.availableProcessors(),
+                'all',
+                'NDK_DEBUG=1'
+    }
+
+
+    task cleanNative(type: Exec, description: 'Clean JNI object files') {
+        def ndkDir = android.ndkDirectory
+        commandLine "$ndkDir/ndk-build.cmd",
+                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
+                'clean'
+    }
+
+    clean.dependsOn 'cleanNative'
+
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn buildNative
+    }
+}
+
